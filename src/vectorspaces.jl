@@ -20,8 +20,8 @@ abstract type BasisSet end
 
 Where `L <: LinearOperator` is the user-defined linear operator type:
 
-* `apply(op::L, idx::Integer)`: return a `VSVector{B}` corresponding to the coefficients
-  of `op` applied on the `idx` basis state
+* `apply(i::Integer, op::L, j::Integer)`: return the `i`-th compoment of the vector that results
+  from applying operator `op` on the basis state `j`.
 * `basis(op::L)`: return the basis set
 """
 abstract type LinearOperator{B <: BasisSet} end
@@ -36,22 +36,16 @@ Base.length(v::VSVector) = length(v.cs)
 Base.:(+)(v1::VSVector{B}, v2::VSVector{B}) where {B <: BasisSet} = VSVector{B}(v1.cs .+ v2.cs)
 
 function apply(op::LinearOperator{B}, x::VSVector{B}) where B <: BasisSet
-    v = zeros(ComplexF64, length(basis(op)))
-    for i in 1:1:length(basis(op))
-        Lei = apply(op, i)
-        v .+= x.cs[i] .* Lei.cs
-    end
-    return VSVector{B}(v)
+    N = length(basis(op))
+    VSVector{B}(ComplexF64[
+        sum(apply(i, op, j) * x.cs[j] for j = 1:N)
+        for i = 1:N
+    ])
 end
 
 function apply(op::LinearOperator{B}, cs::Vector) where B <: BasisSet
     @assert length(cs) == length(basis(op))
     apply(op, VSVector{B}(cs))
-end
-
-function matrixelement(op::LinearOperator, i::Integer, j::Integer)
-    vj = apply(op, j)
-    vj.cs[i]
 end
 
 """
@@ -61,5 +55,5 @@ Returns a matrix representation of the operator `op`.
 """
 function matrix(op::LinearOperator)
     N = length(basis(op))
-    [matrixelement(op, i, j) for i = 1:N, j = 1:N]
+    [apply(i, op, j) for i = 1:N, j = 1:N]
 end

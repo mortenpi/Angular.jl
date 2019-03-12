@@ -25,11 +25,7 @@ struct TestOperator <: LinearOperator{TestBasis}
     end
 end
 Angular.basis(op::TestOperator) = op.b
-function Angular.apply(op::TestOperator, idx::Integer)
-    v = zeros(ComplexF64, length(op.b))
-    v[idx] = op.diag[idx]
-    Angular.VSVector{TestBasis}(v)
-end
+Angular.apply(i::Integer, op::TestOperator, j::Integer) :: ComplexF64 = (i == j) ? op.diag[i] : 0.0
 # ==========================================================================================
 
 @testset "Angular.jl" begin
@@ -47,5 +43,22 @@ end
 
         @test isdiag(Angular.matrix(op))
         @test diag(Angular.matrix(op)) == [1, 2, 3]
+
+        # TODO: add tests for compositeoperators
+    end
+    @testset "angular momentum" begin
+        mz = Angular.matrix(Angular.JOperator(Angular.AngularBasis(5//2), :z))
+        @test isdiag(mz)
+        for twoj = 0:20
+            b = Angular.AngularBasis(twoj//2)
+            @test length(b) == twoj+1
+            j = convert(Float64, b.j)
+            Jz, J₊, J₋ = Angular.JOperator(b, :z), Angular.JOperator(b, :+), Angular.JOperator(b, :-)
+            Jx = (J₊ + J₋) / 2
+            Jy = (J₊ - J₋) / (2im)
+            J2matrix = Angular.matrix(Jx^2 + Jy^2 + Jz^2)
+            @test isdiag(J2matrix)
+            @test all(diag(J2matrix) .≈ j*(j + 1))
+        end
     end
 end
