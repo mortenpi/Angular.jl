@@ -57,3 +57,9 @@ function matrix(op::LinearOperator)
     N = length(basis(op))
     [apply(i, op, j) for i = 1:N, j = 1:N]
 end
+
+struct IdentityOperator{B <: BasisSet} <: LinearOperator{B}
+    b :: B
+end
+basis(op::IdentityOperator) = op.b
+apply(i::Integer, op::IdentityOperator, j::Integer) = ComplexF64(i == j ? 1.0 : 0.0)

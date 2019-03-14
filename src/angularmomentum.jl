@@ -43,3 +43,25 @@ function apply(i::Integer, op::JOperator{K}, j::Integer) :: ComplexF64 where K
         error("Unreachable reached.")
     end
 end
+
+struct JOperatorSet{T,U,V}
+    J₊ :: T
+    J₋ :: U
+    Jz :: V
+end
+function JOperatorSet(b::BasisSet)
+    Jz = JOperator(b, :z)
+    J₊, J₋ = JOperator(b, :+), JOperator(b, :-)
+    JOperatorSet(J₊, J₋, Jz)
+end
+
+Jx(op::JOperatorSet) = (op.J₊ + op.J₋) / 2
+Jy(op::JOperatorSet) = (op.J₊ - op.J₋) / (2im)
+J2(op::JOperatorSet) = Jx(op)^2 + Jy(op)^2 + op.Jz^2
+
+"""
+    findj(λ) -> HalfInteger
+
+Convert and ``J^2`` operator eigenvalue into the corresponding half-integer ``j`` value.
+"""
+findj(λ) = HalfInteger(isqrt(1 + round(Int, real(4λ))) - 1, 2)
