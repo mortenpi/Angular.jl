@@ -123,16 +123,16 @@ Angular.apply(i::Integer, op::TestOperator, j::Integer) :: ComplexF64 = (i == j)
         @test minimum(js) == 1//2
 
         e = Angular.simeigen(Angular.matrix(Angular.J2(J)), Angular.matrix(J.Jz))
-        @show size(e.values)
         for i = 1:length(tpb)
             j, m = Angular.findj(e.values[1,i]), HalfInteger(round(Int, 2*real(e.values[2,i])), 2)
-            @show j m
-            for k = 1:length(tpb)
+            cs_ref = map(1:length(tpb)) do k
                 k1, k2 = Angular.leftindex(tpb, k), Angular.rightindex(tpb, k)
                 m1, m2 = Angular.m(b1, k1), Angular.m(b2, k2)
-                c = abs(e.vectors[k,i])
-                c_ref = abs(WignerSymbols.clebschgordan(j1, m1, j2, m2, j, m))
-                @test c ≈ c_ref atol=1e-10
+                WignerSymbols.clebschgordan(j1, m1, j2, m2, j, m)
+            end
+            @test abs(cs_ref' * e.vectors[:,i]) ≈ 1.0 atol=1e-10
+            for k = 1:length(tpb)
+                @test abs(e.vectors[k,i]) ≈ abs(cs_ref[k]) atol=1e-10
             end
         end
     end
