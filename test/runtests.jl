@@ -144,4 +144,45 @@ Angular.apply(i::Integer, op::TestOperator, j::Integer) :: ComplexF64 = (i == j)
 
         @test Angular.findsimilar([1.0, 1.0, 2.0]) == [[1,2] => 1.0, [3] => 2.0]
     end
+
+    @testset "combinatorics" begin
+        using Angular: combinationrank, combinationunrank
+        for (i, x) in enumerate(1:5)
+            @test combinationrank(x) == i
+            @test combinationunrank(1, i) == (x,)
+        end
+        for (i, xs) in enumerate([(1,2),(1,3),(2,3)])
+            @test combinationrank(xs...) == i
+            @test combinationunrank(2, i) == xs
+        end
+        for (i, xs) in enumerate([
+                (1,2,3), (1,2,4), (1,3,4), (2,3,4), (1,2,5), (1,3,5), (2,3,5)
+            ])
+            @test combinationrank(xs...) == i
+            @test combinationunrank(3, i) == xs
+        end
+    end
+
+    @testset "fock spaces" begin
+        for dim = 2:4, N = 1:dim
+            b = TestBasis(dim)
+            fb = Angular.FermionSpace(b, N)
+            @test length(fb) == binomial(dim, N)
+        end
+
+        b = TestBasis(5)
+        fb = Angular.FermionSpace(b, 3)
+        @test length(fb) == 10
+
+        op = TestOperator(b, [1, 2, 3, 4, 5])
+        fop = Angular.Fermion1POperator(fb, op)
+        let i = combinationrank(1, 2, 3)
+            @test Angular.apply(i, fop, i) == 1+2+3
+        end
+        let i = combinationrank(1, 3, 5)
+            @test Angular.apply(i, fop, i) == 1+3+5
+        end
+        @test Angular.apply(1, fop, 2) == 0
+        @test Angular.apply(1, fop, 10) == 0
+    end
 end
