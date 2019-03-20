@@ -89,6 +89,10 @@ Angular.apply(i::Integer, op::TestOperator, j::Integer) :: ComplexF64 = (i == j)
     @testset "tensor products" begin
         b1 = TestBasis(4)
         b2 = Angular.AngularBasis(5//2)
+        op1 = TestOperator(b1, [1,2,3,4])
+        op2 = Angular.JOperator(b2, :z)
+
+        # tensor products
         tpb = Angular.TensorProductBasis(b1, b2)
         @test length(tpb) == length(b1) * length(b2)
 
@@ -99,11 +103,19 @@ Angular.apply(i::Integer, op::TestOperator, j::Integer) :: ComplexF64 = (i == j)
         @test Angular.leftindex(tpb, 24) == 4
         @test Angular.rightindex(tpb, 24) == 6
 
-        op1 = TestOperator(b1, [1,2,3,4])
-        op2 = Angular.JOperator(b2, :z)
-        op = Angular.ExtensionOperator(tpb, op1, op2)
+        op = Angular.ProductExtensionOperator(tpb, op1, op2)
         @test isdiag(Angular.matrix(op))
         @test Angular.apply(7, op, 7) ≈ -4.5
+
+        # tensor sums
+        tsb = Angular.TensorSumBasis(b1, b2)
+        @test length(tsb) == length(b1) + length(b2)
+
+        op = Angular.SumExtensionOperator(tsb, op1, op2)
+        @test isdiag(Angular.matrix(op))
+        @test Angular.apply(4, op, 5) ≈ 0.0
+        @test Angular.apply(4, op, 4) ≈ 4
+        @test Angular.apply(5, op, 5) ≈ -2.5
     end
 
     @testset "Clebsch-Gordan coefficients" begin
@@ -112,9 +124,9 @@ Angular.apply(i::Integer, op::TestOperator, j::Integer) :: ComplexF64 = (i == j)
         id1, id2 = Angular.IdentityOperator(b1), Angular.IdentityOperator(b2)
         J1, J2 = Angular.JOperatorSet(b1), Angular.JOperatorSet(b2)
         tpb = Angular.TensorProductBasis(b1, b2)
-        Jz = Angular.ExtensionOperator(tpb, J1.Jz, id2) + Angular.ExtensionOperator(tpb, id1, J2.Jz)
-        J₊ = Angular.ExtensionOperator(tpb, J1.J₊, id2) + Angular.ExtensionOperator(tpb, id1, J2.J₊)
-        J₋ = Angular.ExtensionOperator(tpb, J1.J₋, id2) + Angular.ExtensionOperator(tpb, id1, J2.J₋)
+        Jz = Angular.ProductExtensionOperator(tpb, J1.Jz, id2) + Angular.ProductExtensionOperator(tpb, id1, J2.Jz)
+        J₊ = Angular.ProductExtensionOperator(tpb, J1.J₊, id2) + Angular.ProductExtensionOperator(tpb, id1, J2.J₊)
+        J₋ = Angular.ProductExtensionOperator(tpb, J1.J₋, id2) + Angular.ProductExtensionOperator(tpb, id1, J2.J₋)
         J = Angular.JOperatorSet(J₊, J₋, Jz)
 
         e = eigen(Angular.matrix(Angular.J2(J)))
@@ -135,6 +147,45 @@ Angular.apply(i::Integer, op::TestOperator, j::Integer) :: ComplexF64 = (i == j)
                 @test abs(e.vectors[k,i]) ≈ abs(cs_ref[k]) atol=1e-10
             end
         end
+    end
+
+    @testset "ls coupling" begin
+        function _test_ls(ℓ)
+            lsb = Angular.LSBasis(ℓ)
+            @test length(lsb) == 2*(2*ℓ + 1)
+
+            ls2j = Angular.LStoJTransform(lsb)
+            B = Angular.matrix(ls2j)
+            for i = 1:length(lsb), j = 1:length(lsb)
+                @test B[i, j] ≈ Angular.transform(i, ls2j, j)
+            end
+
+            # Solve for the LS-to-J transformation via diagonalization
+            L = Angular.JOperatorSet(Angular.LOperator, lsb)
+            S = Angular.JOperatorSet(Angular.SOperator, lsb)
+            J = Angular.JOperatorSet(L.J₊ + S.J₊, L.J₋ + S.J₋, L.Jz + S.Jz)
+            J2, Jz = Angular.J2(J), J.Jz
+            e = Angular.simeigen(Angular.matrix(J2), Angular.matrix(Jz))
+            @test all(imag.(e.values) .≈ 0.0)
+            js, ms = Angular.findj.(real.(e.values[1,:])), round.(HalfInteger, real.(e.values[2,:]))
+            @test all(e.values[1,:] .≈ convert.(Float64, js.*(js .+ 1)))
+            @test all(e.values[2,:] .≈ convert.(Float64, ms))
+            let njs = sort(Angular.countunique(js))
+                @test length(njs) == 2
+                @test njs[1] == ((ℓ - 1//2) => 2ℓ)
+                @test njs[2] == ((ℓ + 1//2) => 2ℓ + 2)
+            end
+
+            for idx = 1:size(e.values, 2)
+                j, m = js[idx], ms[idx]
+                i = convert(Int, (j < ℓ ? 0 : 2j-1) + (1 + m + j))
+                # agreement with Glebch-Gordan coefficients up to a global phase
+                @test abs.(e.vectors[:, idx]) ≈ abs.(B[i, :])
+            end
+        end
+        _test_ls(1)
+        _test_ls(2)
+        _test_ls(5)
     end
 
     @testset "linear algebra" begin

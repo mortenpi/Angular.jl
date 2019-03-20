@@ -44,16 +44,17 @@ function apply(i::Integer, op::JOperator{K}, j::Integer) :: ComplexF64 where K
     end
 end
 
-struct JOperatorSet{T,U,V}
+struct JOperatorSet{B <: BasisSet, T <: LinearOperator{B}, U <: LinearOperator{B}, V <: LinearOperator{B}}
     J₊ :: T
     J₋ :: U
     Jz :: V
 end
-function JOperatorSet(b::BasisSet)
-    Jz = JOperator(b, :z)
-    J₊, J₋ = JOperator(b, :+), JOperator(b, :-)
-    JOperatorSet(J₊, J₋, Jz)
+function JOperatorSet(JOp, b::BasisSet)
+    Jz = JOp(b, :z)
+    J₊, J₋ = JOp(b, :+), JOp(b, :-)
+    JOperatorSet{typeof(b),typeof(J₊),typeof(J₋),typeof(Jz)}(J₊, J₋, Jz)
 end
+JOperatorSet(b::BasisSet) = JOperatorSet(JOperator, b)
 
 Jx(op::JOperatorSet) = (op.J₊ + op.J₋) / 2
 Jy(op::JOperatorSet) = (op.J₊ - op.J₋) / (2im)

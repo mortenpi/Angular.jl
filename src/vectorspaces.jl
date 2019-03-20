@@ -26,8 +26,25 @@ Where `L <: LinearOperator` is the user-defined linear operator type:
 """
 abstract type LinearOperator{B <: BasisSet} end
 
+"""
+    abstract type BasisTransformation{B1 <: BasisSet, B2 <: BasisSet}
+
+Abstract type for representations of basis transformations between two basis sets, from `B1` to `B2`.
+
+# Interface
+
+* `basisfrom(::BasisTransformation)`: return the basis `B1`
+* `basisto(::BasisTransformation)`: return the basis `B2`
+* `transform(i::Integer, ::BasisTransformation, j::Integer)`: return the `i`-th component of the vector
+  in `B2` corresponding to the transformed `j`-th vector of `B1`.
+"""
+abstract type BasisTransformation{B1 <: BasisSet, B2 <: BasisSet} end
+
 function apply end
 function basis end
+function basisfrom end
+function basisto end
+function transform end
 
 struct VSVector{B <: BasisSet}
     cs :: Vector{ComplexF64}
@@ -56,6 +73,16 @@ Returns a matrix representation of the operator `op`.
 function matrix(op::LinearOperator)
     N = length(basis(op))
     [apply(i, op, j) for i = 1:N, j = 1:N]
+end
+
+"""
+    matrix(bt::BasisTransformation)
+
+Return the matrix representation of the basis transformation `bt`.
+"""
+function matrix(bt::BasisTransformation)
+    N1, N2 = length(basisfrom(bt)), length(basisto(bt))
+    [transform(i, bt, j) for i = 1:N2, j = 1:N1]
 end
 
 struct IdentityOperator{B <: BasisSet} <: LinearOperator{B}
