@@ -7,6 +7,9 @@ using Test
 # ==========================================================================================
 # TestBasis
 # ------------------------------------------------------------------------------------------
+countmatrix(i::Integer, j::Integer) = div((max(i, j) - 1)*max(i, j), 2) + min(i, j)
+countmatrix(i::Integer) = countmatrix(i, i)
+
 using Angular: BasisSet, LinearOperator
 struct TestBasis <: BasisSet
     n :: Int
@@ -20,31 +23,28 @@ Base.length(b::TestBasis) = b.n
 
 struct TestOperator <: LinearOperator{TestBasis}
     b :: TestBasis
-    diag :: Vector{ComplexF64}
-    function TestOperator(b, diag)
-        @assert length(b) == length(diag)
-        new(b, diag)
-    end
 end
 Angular.basis(op::TestOperator) = op.b
-Angular.apply(i::Integer, op::TestOperator, j::Integer) :: ComplexF64 = (i == j) ? op.diag[i] : 0.0
+function Angular.apply(i::Integer, op::TestOperator, j::Integer) :: ComplexF64
+    (1 <= i <= length(op.b)) && (1 <= j <= length(op.b)) || throw(BoundsError(op, (i, j)))
+    countmatrix(i, j)
+end
 # ==========================================================================================
 
 @testset "Angular.jl" begin
     @testset "TestBasis" begin
         b = TestBasis(3)
         @test length(b) == 3
-        op = TestOperator(b, [1, 2, 3])
+        op = TestOperator(b)
+
+        @test Angular.matrix(op) == [1 2 4; 2 3 5; 4 5 6]
 
         v1 = Angular.apply(op, [1, 1, 1])
         v2 = Angular.apply(op, v1)
         v3 = Angular.apply(op, v1 + v2)
-        @test v1.cs == [1, 2, 3]
-        @test v2.cs == [1, 4, 9]
-        @test v3.cs == [2, 12, 36]
-
-        @test isdiag(Angular.matrix(op))
-        @test diag(Angular.matrix(op)) == [1, 2, 3]
+        @test v1.cs == [7, 10, 15]
+        @test v2.cs == [87, 119, 168]
+        @test v3.cs == [1084, 1490, 2119]
 
         # identity operator
         id = Angular.IdentityOperator(b)
@@ -89,7 +89,7 @@ Angular.apply(i::Integer, op::TestOperator, j::Integer) :: ComplexF64 = (i == j)
     @testset "tensor products" begin
         b1 = TestBasis(4)
         b2 = Angular.AngularBasis(5//2)
-        op1 = TestOperator(b1, [1,2,3,4])
+        op1 = TestOperator(b1)
         op2 = Angular.JOperator(b2, :z)
 
         # tensor products
@@ -104,17 +104,18 @@ Angular.apply(i::Integer, op::TestOperator, j::Integer) :: ComplexF64 = (i == j)
         @test Angular.rightindex(tpb, 24) == 6
 
         op = Angular.ProductExtensionOperator(tpb, op1, op2)
-        @test isdiag(Angular.matrix(op))
-        @test Angular.apply(7, op, 7) ≈ -4.5
+        @test ishermitian(Angular.matrix(op))
+        @test Angular.apply(7, op, 7) ≈ -1.5 * countmatrix(3)
+        @test Angular.apply(7, op, 24) ≈ 0
 
         # tensor sums
         tsb = Angular.TensorSumBasis(b1, b2)
         @test length(tsb) == length(b1) + length(b2)
 
         op = Angular.SumExtensionOperator(tsb, op1, op2)
-        @test isdiag(Angular.matrix(op))
+        @test ishermitian(Angular.matrix(op))
         @test Angular.apply(4, op, 5) ≈ 0.0
-        @test Angular.apply(4, op, 4) ≈ 4
+        @test Angular.apply(4, op, 4) ≈ countmatrix(4)
         @test Angular.apply(5, op, 5) ≈ -2.5
     end
 
@@ -225,15 +226,15 @@ Angular.apply(i::Integer, op::TestOperator, j::Integer) :: ComplexF64 = (i == j)
         fb = Angular.FermionSpace(b, 3)
         @test length(fb) == 10
 
-        op = TestOperator(b, [1, 2, 3, 4, 5])
+        op = TestOperator(b)
         fop = Angular.Fermion1POperator(fb, op)
         let i = combinationrank(1, 2, 3)
-            @test Angular.apply(i, fop, i) == 1+2+3
+            @test Angular.apply(i, fop, i) == sum(countmatrix(k) for k=1:3)
         end
         let i = combinationrank(1, 3, 5)
-            @test Angular.apply(i, fop, i) == 1+3+5
+            @test Angular.apply(i, fop, i) == sum(countmatrix(k) for k=1:2:5)
         end
-        @test Angular.apply(1, fop, 2) == 0
-        @test Angular.apply(1, fop, 10) == 0
+        @test Angular.apply(1, fop, 2) ≈ countmatrix(3, 4) # <1,2,3| O |1,2,4>
+        @test Angular.apply(1, fop, 10) ≈ 0
     end
 end

@@ -36,9 +36,9 @@ end
 basis(op::SumExtensionOperator) = op.tsb
 function apply(i::Integer, op::SumExtensionOperator, j::Integer) :: ComplexF64
     N1 = length(op.tsb.b1)
-    if i <= N1 && i <= N1
+    if i <= N1 && j <= N1
         apply(i, op.op1, j)
-    elseif i > N1 && i > N1
+    elseif i > N1 && j > N1
         apply(i - N1, op.op2, j - N1)
     else
         0.0
