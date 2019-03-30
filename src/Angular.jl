@@ -39,6 +39,13 @@ macro halfint(x)
     convert(HalfInteger, value)
 end
 
+"""
+    halfint(x) -> HalfInteger
+
+Converts any valid numeric value to a `HalfInteger`. A shorthand for `convert(HalfInteger, x)`.
+"""
+halfint(x) = convert(HalfInteger, x)
+
 include("combinatorics.jl")
 include("linearalgebra.jl")
 include("vectorspaces.jl")
