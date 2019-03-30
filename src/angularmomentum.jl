@@ -56,6 +56,15 @@ function JOperatorSet(JOp, b::BasisSet)
 end
 JOperatorSet(b::BasisSet) = JOperatorSet(JOperator, b)
 
+function JOperatorSet(f::Function, js::Vararg{JOperatorSet})
+    length(js) > 0 || throw(ArgumentError("Must provide at least one J operator"))
+    Angular.JOperatorSet(
+        f((j.J₊ for j in js)...),
+        f((j.J₋ for j in js)...),
+        f((j.Jz for j in js)...)
+    )
+end
+
 Jx(op::JOperatorSet) = (op.J₊ + op.J₋) / 2
 Jy(op::JOperatorSet) = (op.J₊ - op.J₋) / (2im)
 J2(op::JOperatorSet) = Jx(op)^2 + Jy(op)^2 + op.Jz^2

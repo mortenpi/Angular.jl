@@ -164,7 +164,7 @@ end
             # Solve for the LS-to-J transformation via diagonalization
             L = Angular.JOperatorSet(Angular.LOperator, lsb)
             S = Angular.JOperatorSet(Angular.SOperator, lsb)
-            J = Angular.JOperatorSet(L.J₊ + S.J₊, L.J₋ + S.J₋, L.Jz + S.Jz)
+            J = Angular.JOperatorSet(+, L, S)
             J2, Jz = Angular.J2(J), J.Jz
             e = Angular.simeigen(Angular.matrix(J2), Angular.matrix(Jz))
             @test all(imag.(e.values) .≈ 0.0)
