@@ -1,7 +1,9 @@
 using Angular
+using Angular: halfint
 using LinearAlgebra
 using WignerSymbols
 using WignerSymbols: HalfInteger
+using AtomicLevels: terms, _terms_jw, Term, Orbital, weight
 using Test
 
 # ==========================================================================================
@@ -236,5 +238,74 @@ end
         end
         @test Angular.apply(1, fop, 2) ≈ countmatrix(3, 4) # <1,2,3| O |1,2,4>
         @test Angular.apply(1, fop, 10) ≈ 0
+    end
+
+    @testset "LS terms" begin
+        function _test_ls_term(ℓ, N)
+            lsb = Angular.LSBasis(ℓ)
+            @test length(lsb) == 2*(2*ℓ + 1)
+            lsfb = Angular.FermionSpace(lsb, N)
+
+            L1 = Angular.JOperatorSet(Angular.LOperator, lsb)
+            S1 = Angular.JOperatorSet(Angular.SOperator, lsb)
+            L = Angular.JOperatorSet(J -> Angular.Fermion1POperator(lsfb, J), L1)
+            S = Angular.JOperatorSet(J -> Angular.Fermion1POperator(lsfb, J), S1)
+            J = Angular.JOperatorSet(+, L, S)
+            e = Angular.simeigen(
+                Angular.matrix(Angular.J2(L)),
+                Angular.matrix(Angular.J2(S)),
+                Angular.matrix(L.Jz),
+                Angular.matrix(S.Jz),
+            )
+            evalues = [Angular.findj.(e.values[1:2,:]); round.(HalfInteger, real.(e.values[3:4,:]))]
+
+            ts = Angular.countunique(Term(evalues[1,i], evalues[2,i], 1) for i=1:size(evalues, 2)) |> sort
+            ts_ref = Angular.countunique(terms(Orbital(:n, ℓ), N)) |> sort
+            @test length(ts) == length(ts_ref)
+            for ((t, n), (t_ref, ref_multiplicity)) in zip(ts, ts_ref)
+                # ref_multiplicity: the number of times this term appears
+                @test n == weight(t) * ref_multiplicity
+            end
+        end
+
+        _test_ls_term(1, 1)
+        _test_ls_term(1, 2)
+        _test_ls_term(1, 3)
+        _test_ls_term(2, 2)
+        #_test_ls_term(2, 3) # too slow
+    end
+
+    @testset "jj terms" begin
+        function _test_jj_term(j, N)
+            b = Angular.AngularBasis(j)
+            @test length(b) == 2*j + 1
+            fb = Angular.FermionSpace(b, N)
+
+            J1 = Angular.JOperatorSet(Angular.JOperator, b)
+            J = Angular.JOperatorSet(J -> Angular.Fermion1POperator(fb, J), J1)
+            e = Angular.simeigen(
+                Angular.matrix(Angular.J2(J)),
+                Angular.matrix(J.Jz),
+            )
+            evalues = [Angular.findj.(e.values[1,:])'; round.(HalfInteger, real.(e.values[2,:]))']
+
+            ts = Angular.countunique(evalues[1,i] for i=1:size(evalues, 2)) |> sort
+            ts_ref = Angular.countunique(_terms_jw(halfint(j), N)) |> sort
+            @test length(ts) == length(ts_ref)
+            for ((J, n), (J_ref, ref_multiplicity)) in zip(ts, ts_ref)
+                # ref_multiplicity: the number of times this term appears
+                @test J == J_ref
+                @test n == (2*J + 1) * ref_multiplicity
+            end
+        end
+
+         _test_jj_term(1//2, 1)
+         _test_jj_term(1//2, 2)
+         _test_jj_term(1, 1)
+         _test_jj_term(1, 2)
+         _test_jj_term(1, 3)
+         _test_jj_term(3//2, 3)
+         _test_jj_term(2, 2)
+         _test_jj_term(5//2, 3)
     end
 end
