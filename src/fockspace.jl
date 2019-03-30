@@ -39,3 +39,28 @@ function apply(i::Integer, op::Fermion1POperator, j::Integer)
     end
     return mij
 end
+
+# Basis transformations between N-fermion spaces
+struct FermionSpaceTransform{N, B1 <: BasisSet, B2 <: BasisSet, BT <: BasisTransformation{B1,B2}} <: BasisTransformation{FermionSpace{N,B1},FermionSpace{N,B2}}
+    bt :: BT
+    fb1 :: FermionSpace{N,B1}
+    fb2 :: FermionSpace{N,B2}
+    function FermionSpaceTransform(
+        bt :: BT,
+        fb1 :: FermionSpace{N, B1},
+        fb2 :: FermionSpace{N, B2}
+    ) where {N, B1 <: BasisSet, B2 <: BasisSet, BT <: BasisTransformation{B1,B2}}
+        @assert length(fb1) == length(fb2)
+        new{N,B1,B2,BT}(bt, fb1, fb2)
+    end
+end
+function FermionSpaceTransform(bt::BasisTransformation, N::Integer)
+    FermionSpaceTransform(bt, FermionSpace(basisfrom(bt), N), FermionSpace(basisto(bt), N))
+end
+Base.length(fsbt::FermionSpaceTransform) = length(fsbt.fb1)
+basisfrom(fsbt::FermionSpaceTransform) = fsbt.fb1
+basisto(fsbt::FermionSpaceTransform) = fsbt.fb2
+function transform(i::Integer, fsbt::FermionSpaceTransform{N}, j::Integer) where N
+    is, js = combinationunrank(N, i), combinationunrank(N, j)
+    sum(prod(transform(is[perm[q]], fsbt.bt, js[q]) for q = 1:N) * levicivita(perm) for perm in permutations(1:N))
+end

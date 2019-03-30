@@ -308,4 +308,28 @@ end
          _test_jj_term(2, 2)
          _test_jj_term(5//2, 3)
     end
+
+    @testset "many-particle LSJ-to-JJ" begin
+        function _test_ls_fockspace(ℓ, N)
+            lsb = Angular.LSBasis(ℓ)
+            @test length(lsb) == 2*(2*ℓ + 1)
+            ls2j = Angular.LStoJTransform(lsb)
+            fst = Angular.FermionSpaceTransform(ls2j, N)
+            B = Angular.matrix(fst)
+            @test all(sum(abs2, B; dims=1) .≈ 1.0)
+
+            # TODO: actually check the values..
+        end
+        _test_ls_fockspace(1, 1)
+        _test_ls_fockspace(1, 2)
+        _test_ls_fockspace(1, 3)
+        _test_ls_fockspace(1, 4)
+        _test_ls_fockspace(1, 5)
+        _test_ls_fockspace(1, 6)
+        _test_ls_fockspace(2, 1)
+        _test_ls_fockspace(2, 2)
+        _test_ls_fockspace(2, 3)
+        _test_ls_fockspace(2, 4)
+        _test_ls_fockspace(3, 3)
+    end
 end
