@@ -69,7 +69,7 @@ basis(op::JOperatorSet) = basis(op.Jz)
 
 Jx(op::JOperatorSet) = (op.J₊ + op.J₋) / 2
 Jy(op::JOperatorSet) = (op.J₊ - op.J₋) / (2im)
-J2(op::JOperatorSet) = Jx(op)^2 + Jy(op)^2 + op.Jz^2
+J2(op::JOperatorSet) = J2Operator(op)
 
 """
     findj(λ) -> HalfInteger
