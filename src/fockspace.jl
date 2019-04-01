@@ -25,17 +25,19 @@ struct Fermion1POperator{N, B <: BasisSet, O <: LinearOperator{B}} <: LinearOper
 end
 basis(op::Fermion1POperator) = op.b
 
-function apply(i::Integer, op::Fermion1POperator, j::Integer)
+function apply(i::Integer, op::Fermion1POperator, j::Integer) :: ComplexF64
     N = nparticles(basis(op))
-    is, js =  combinationunrank(N, i),  combinationunrank(N, j)
-    # TODO: the implementation can actually be optimized by noting that the matrix element is
-    # non-zero only if is == js or they differ by one element.
-    mij :: ComplexF64 = 0.0
-    for ni = 1:N, nj = 1:N
-        _is = (is[1:ni-1]..., is[ni+1:end]...)
-        _js = (js[1:nj-1]..., js[nj+1:end]...)
-        _is == _js || continue
-        mij += (-1)^(ni + nj) * apply(is[ni], op.op, js[nj])
+    if i == j
+        is = combinationunrank(N, i)
+        sum(apply(i, op.op, i) for i = is)
+    else
+        is, js =  combinationunrank(N, i),  combinationunrank(N, j)
+        scd = findcombinationdiff(is, js)
+        if isnothing(scd)
+            0.0
+        else
+            idx1, idx2 = scd
+            apply(is[idx1], op.op, js[idx2]) * (-1)^(idx1 + idx2)
+        end
     end
-    return mij
 end

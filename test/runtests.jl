@@ -215,29 +215,77 @@ end
             @test combinationrank(xs...) == i
             @test combinationunrank(3, i) == xs
         end
+
+        @testset "findcombinationdiff" begin
+            using Angular: findcombinationdiff
+            @test findcombinationdiff((1,),(1,)) === nothing
+            @test findcombinationdiff((1,),(2,)) == (1, 1)
+            @test findcombinationdiff((2,),(1,)) == (1, 1)
+            @test findcombinationdiff((1,2),(2,3)) == (1, 2)
+            @test findcombinationdiff((1,2),(3,4)) === nothing
+            @test findcombinationdiff((1,2),(1,2)) === nothing
+            @test findcombinationdiff((1,2,3,5),(1,2,4,5)) == (3, 3)
+            @test findcombinationdiff((1,2,3),(1,2,4)) == (3, 3)
+
+            nb1, nb2 = 0, 0
+            for N = 1:5, i = 1:20, j=1:20
+                is, js = combinationunrank(N, i), combinationunrank(N, j)
+                sd1, sd2 = setdiff(Set(is), Set(js)), setdiff(Set(js), Set(is))
+                if length(sd1) == 1 && length(sd2) == 1
+                    idx1, idx2 = findfirst(isequal(first(sd1)), is), findfirst(isequal(first(sd2)), js)
+                    @test findcombinationdiff(is, js) == (idx1, idx2)
+                    nb1 += 1
+                else
+                    @test findcombinationdiff(is, js) === nothing
+                    nb2 += 1
+                end
+            end
+            @debug "Single diff branch: $nb1, nothing branch: $nb2"
+        end
     end
 
     @testset "fock spaces" begin
+        using Angular: FermionSpace, Fermion1POperator, nparticles, apply, basis
+
         for dim = 2:4, N = 1:dim
             b = TestBasis(dim)
-            fb = Angular.FermionSpace(b, N)
+            fb = FermionSpace(b, N)
             @test length(fb) == binomial(dim, N)
         end
 
         b = TestBasis(5)
-        fb = Angular.FermionSpace(b, 3)
+        fb = FermionSpace(b, 3)
         @test length(fb) == 10
 
         op = TestOperator(b)
-        fop = Angular.Fermion1POperator(fb, op)
+        fop = Fermion1POperator(fb, op)
         let i = combinationrank(1, 2, 3)
-            @test Angular.apply(i, fop, i) == sum(countmatrix(k) for k=1:3)
+            @test apply(i, fop, i) == sum(countmatrix(k) for k=1:3)
         end
         let i = combinationrank(1, 3, 5)
-            @test Angular.apply(i, fop, i) == sum(countmatrix(k) for k=1:2:5)
+            @test apply(i, fop, i) == sum(countmatrix(k) for k=1:2:5)
         end
-        @test Angular.apply(1, fop, 2) ≈ countmatrix(3, 4) # <1,2,3| O |1,2,4>
-        @test Angular.apply(1, fop, 10) ≈ 0
+        @test apply(1, fop, 2) ≈ countmatrix(3, 4) # <1,2,3| O |1,2,4>
+        @test apply(1, fop, 10) ≈ 0
+
+        function ref_apply(i::Integer, op::Fermion1POperator, j::Integer)
+            N = nparticles(basis(op))
+            is, js =  combinationunrank(N, i),  combinationunrank(N, j)
+            # TODO: the implementation can actually be optimized by noting that the matrix element is
+            # non-zero only if is == js or they differ by one element.
+            mij :: ComplexF64 = 0.0
+            for ni = 1:N, nj = 1:N
+                _is = (is[1:ni-1]..., is[ni+1:end]...)
+                _js = (js[1:nj-1]..., js[nj+1:end]...)
+                _is == _js || continue
+                mij += (-1)^(ni + nj) * apply(is[ni], op.op, js[nj])
+            end
+            return mij
+        end
+
+        for i=1:length(fb), j=1:length(fb)
+            @test apply(i, fop, j) == ref_apply(i, fop, j)
+        end
     end
 
     @testset "LS terms" begin
