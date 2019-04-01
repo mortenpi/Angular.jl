@@ -322,7 +322,14 @@ end
         _test_ls_term(1, 2)
         _test_ls_term(1, 3)
         _test_ls_term(2, 2)
-        #_test_ls_term(2, 3) # too slow
+        _test_ls_term(2, 3)
+        _test_ls_term(3, 1)
+        _test_ls_term(3, 2)
+        _test_ls_term(3, 3)
+        _test_ls_term(4, 2)
+        _test_ls_term(4, 16)
+        _test_ls_term(4, 17)
+        _test_ls_term(4, 18)
     end
 
     @testset "jj terms" begin
@@ -357,5 +364,12 @@ end
          _test_jj_term(3//2, 3)
          _test_jj_term(2, 2)
          _test_jj_term(5//2, 3)
+         _test_jj_term(7//2, 1)
+         _test_jj_term(7//2, 2)
+         _test_jj_term(7//2, 5)
+         _test_jj_term(9//2, 5)
+         _test_jj_term(5, 7)
+         _test_jj_term(10//2, 5)
+         _test_jj_term(11//2, 6)
     end
 end
