@@ -65,6 +65,8 @@ function JOperatorSet(f::Function, js::Vararg{JOperatorSet})
     )
 end
 
+basis(op::JOperatorSet) = basis(op.Jz)
+
 Jx(op::JOperatorSet) = (op.J₊ + op.J₋) / 2
 Jy(op::JOperatorSet) = (op.J₊ - op.J₋) / (2im)
 J2(op::JOperatorSet) = Jx(op)^2 + Jy(op)^2 + op.Jz^2
@@ -75,3 +77,22 @@ J2(op::JOperatorSet) = Jx(op)^2 + Jy(op)^2 + op.Jz^2
 Convert and ``J^2`` operator eigenvalue into the corresponding half-integer ``j`` value.
 """
 findj(λ) = HalfInteger(isqrt(1 + round(Int, real(4λ))) - 1, 2)
+
+struct J2Operator{B <: BasisSet, JS <: JOperatorSet{B}, EOP <: LinearOperator{B}} <: LinearOperator{B}
+    J :: JS
+    J2 :: EOP
+
+    function J2Operator(jops :: JOperatorSet)
+        b = basis(jops)
+        J2 = (jops.J₊*jops.J₋ + jops.J₋*jops.J₊)/2 + jops.Jz^2
+        new{typeof(b),typeof(jops),typeof(J2)}(jops, J2)
+    end
+end
+basis(op::J2Operator) = basis(op.J)
+apply(i::Integer, op::J2Operator, j::Integer) = apply(i, op.J2, j)
+function matrix(j2op::J2Operator)
+    J₊ = matrix(j2op.J.J₊)
+    J₋ = matrix(j2op.J.J₋)
+    Jz = matrix(j2op.J.Jz)
+    (J₊*J₋ .+ J₋*J₊)./2 .+ Jz^2
+end

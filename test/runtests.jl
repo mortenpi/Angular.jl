@@ -79,12 +79,14 @@ end
         end
     end
     @testset "JOperatorSet" begin
+        using Angular: AngularBasis, JOperatorSet, matrix, Jx, Jy, J2
         for twoj = 0:10
-            J = Angular.JOperatorSet(Angular.AngularBasis(twoj//2))
+            J = JOperatorSet(AngularBasis(twoj//2))
             Jz, J₊, J₋ = J.Jz, J.J₊, J.J₋
-            @test Angular.matrix(Angular.Jx(J)) ≈ Angular.matrix((J₊ + J₋) / 2)
-            @test Angular.matrix(Angular.Jy(J)) ≈ Angular.matrix((J₊ - J₋) / (2im))
-            @test Angular.matrix(Angular.J2(J)) ≈ Angular.matrix((J₊*J₋ + J₋*J₊)/2 + Jz^2)
+            @test matrix(Jx(J)) ≈ matrix((J₊ + J₋) / 2)
+            @test matrix(Jy(J)) ≈ matrix((J₊ - J₋) / (2im))
+            @test matrix(J2(J)) ≈ matrix((J₊*J₋ + J₋*J₊)/2 + Jz^2)
+            @test matrix(J2(J)) ≈ matrix(Jx(J)^2 + Jy(J)^2 + J.Jz^2)
         end
     end
 
