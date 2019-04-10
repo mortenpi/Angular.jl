@@ -1,4 +1,5 @@
 module Angular
+using Compat
 using LinearAlgebra
 using Statistics
 using WignerSymbols: HalfInteger, clebschgordan
