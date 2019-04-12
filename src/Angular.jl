@@ -2,7 +2,9 @@ module Angular
 using Compat
 using LinearAlgebra
 using Statistics
+using Formatting
 using WignerSymbols: HalfInteger, clebschgordan
+import AtomicLevels
 
 # TODO: move this to WignerSymbols
 Base.round(::Type{HalfInteger}, x) = HalfInteger(round(Int, 2x), 2)
@@ -55,5 +57,6 @@ include("tensorproducts.jl")
 include("fockspace.jl")
 include("angularmomentum.jl")
 include("lscoupling.jl")
+include("csfs.jl")
 
 end # module

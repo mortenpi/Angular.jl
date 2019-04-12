@@ -15,6 +15,8 @@ struct FermionSpace{N,B <: BasisSet} <: BasisSet
 end
 Base.length(fs::FermionSpace{N}) where N = binomial(length(fs.b), N)
 nparticles(::FermionSpace{N}) where N = N
+spbasis(fb::FermionSpace) = fb.b
+spindices(::FermionSpace{N}, idx) where N = combinationunrank(N, idx)
 
 struct Fermion1POperator{N, B <: BasisSet, O <: LinearOperator{B}} <: LinearOperator{FermionSpace{N,B}}
     b :: FermionSpace{N,B}
