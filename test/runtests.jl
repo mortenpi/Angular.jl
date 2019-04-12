@@ -44,9 +44,14 @@ end
         v1 = Angular.apply(op, [1, 1, 1])
         v2 = Angular.apply(op, v1)
         v3 = Angular.apply(op, v1 + v2)
-        @test v1.cs == [7, 10, 15]
-        @test v2.cs == [87, 119, 168]
-        @test v3.cs == [1084, 1490, 2119]
+        @test v1 == [7, 10, 15]
+        @test v2 == [87, 119, 168]
+        @test v3 == [1084, 1490, 2119]
+
+        # states
+        s1 = Angular.State(b, [1,0,0])
+        s2 = Angular.State(b, [0,1,0])
+        @test normalize(s1 + 2*s2).cs == [1,2,0]./sqrt(5)
 
         # identity operator
         id = Angular.IdentityOperator(b)

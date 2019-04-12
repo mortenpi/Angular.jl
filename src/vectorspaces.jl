@@ -46,24 +46,12 @@ function basisfrom end
 function basisto end
 function transform end
 
-struct VSVector{B <: BasisSet}
-    cs :: Vector{ComplexF64}
-end
-Base.length(v::VSVector) = length(v.cs)
-Base.:(+)(v1::VSVector{B}, v2::VSVector{B}) where {B <: BasisSet} = VSVector{B}(v1.cs .+ v2.cs)
-
-function apply(op::LinearOperator{B}, x::VSVector{B}) where B <: BasisSet
+function apply(op::LinearOperator{B}, cs::Vector{<:Number}) where B <: BasisSet
     N = length(basis(op))
-    VSVector{B}(ComplexF64[
-        sum(apply(i, op, j) * x.cs[j] for j = 1:N)
-        for i = 1:N
-    ])
+    length(cs) == N || error("cs must have $(length(basis(op))) elements")
+    ComplexF64[sum(apply(i, op, j) * cs[j] for j = 1:N) for i = 1:N]
 end
 
-function apply(op::LinearOperator{B}, cs::Vector) where B <: BasisSet
-    @assert length(cs) == length(basis(op))
-    apply(op, VSVector{B}(cs))
-end
 
 """
     matrix(op::LinearOperator)
@@ -90,3 +78,22 @@ struct IdentityOperator{B <: BasisSet} <: LinearOperator{B}
 end
 basis(op::IdentityOperator) = op.b
 apply(i::Integer, op::IdentityOperator, j::Integer) = ComplexF64(i == j ? 1.0 : 0.0)
+
+# States BasisSet
+struct State{B <: BasisSet}
+    b :: B
+    cs :: Vector{ComplexF64}
+
+    function State(b::BasisSet, cs::Vector{<:Number})
+        length(b) == length(cs) || error("Must have $(length(b)) components")
+        new{typeof(b)}(b, cs)
+    end
+end
+Base.length(v::State) = length(v.cs)
+basis(s::State) = s.b
+function Base.:(+)(v1::State{B}, v2::State{B}) where {B <: BasisSet}
+    v1.b == v2.b || error("Basis sets must match")
+    State(v1.b, v1.cs .+ v2.cs)
+end
+Base.:(*)(c::Number, v::State) = State(basis(v), c .* v.cs)
+LinearAlgebra.normalize(v::State) = State(basis(v), v.cs ./ sqrt(sum(abs2.(v.cs))))
