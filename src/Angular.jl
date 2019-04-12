@@ -5,6 +5,7 @@ using Statistics
 using Formatting
 using WignerSymbols: HalfInteger, clebschgordan
 import AtomicLevels
+using AtomicLevels: AbstractOrbital
 
 # TODO: move this to WignerSymbols
 Base.round(::Type{HalfInteger}, x) = HalfInteger(round(Int, 2x), 2)
@@ -58,5 +59,6 @@ include("fockspace.jl")
 include("angularmomentum.jl")
 include("lscoupling.jl")
 include("csfs.jl")
+include("atomicconfigurations.jl")
 
 end # module
