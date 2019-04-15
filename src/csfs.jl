@@ -130,6 +130,15 @@ function Base.getindex(csfs::JJCSFs, idx::Integer)
     JJState(csfs, J, M, csfs.states[:, idx])
 end
 
+function Base.findall(jjcsfs::JJCSFs, J::Real, M::Real)
+    J, M = convert(HalfInteger, J), convert(HalfInteger, M)
+    idxs = Int[]
+    for i = 1:size(jjcsfs.values, 2)
+        jjcsfs.values[1,i] == J && jjcsfs.values[2,i] == M && push!(idxs, i)
+    end
+    return idxs
+end
+
 struct JJState{N}
     csfs :: JJCSFs{N}
     J :: HalfInteger
